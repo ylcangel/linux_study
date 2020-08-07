@@ -141,11 +141,16 @@ write_char:
 #	pushl %eax
 	mov $SCRN_SEL, %ebx		# SCRN_SEL	= 0x18对应0000 0000 0001 1000,TI = 0(对应GDT), CPL=0(内核态), DI = 3, 对应screen 0x18 - for display
 	mov %bx, %gs			# gs段寄存器为0x18
-	movl scr_loc, %bx		# 把scr_loc对应偏移赋值给bx(低16位)，怎么感觉这行不对呢？
-	shl $1, %ebx			# 这步会影响标志寄存器的进位标志CF，具体啥作用，这里不清楚
+	movl scr_loc, %bx		# 把scr_loc对应值，即屏幕位置赋值给bx
+	shl $1, %ebx			# 通过搜索了解到显示一个字符要用两个字节，低字节是字符，高字节是显示属性（如颜色、背景等），逻辑左移一位等于乘2
+                            # 屏幕位置和显存位置相差两倍关系，如下：
+                            # 0 0:0,1
+                            # 1 2:2,3
+                            # 2 4:4,5
+                            # 3 6:6,7
 	movb %al, %gs:(%ebx)	# 输出al对应的ascii字符到显示器，从显示器第0个位置开始
-	shr $1, %ebx			# 在逻辑右移1，具体啥作用，这里不清楚
-	incl %ebx				# ebx加1
+	shr $1, %ebx			# 在逻辑右移1，除以2变回原值
+	incl %ebx				# ebx加1，屏幕位置加1
 	cmpl $2000, %ebx		# 和2000对比
 	jb 1f
 	movl $0, %ebx			# 输出超过2000个字符后，在从头开始输出
