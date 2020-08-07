@@ -49,7 +49,7 @@ load_system:
 	mov	es,ax  				! 内存段起始地址 ES
 	xor	bx,bx  				! 内存偏移  最终ES:bx = 0x1000:0，即内存地址0x10000处
 	mov	ax,#0x200+SYSLEN  	! 0x211, AH = 0010, 02h是Read Sectors From Drive， AL = 10001, Sectors To Read Count, 0x11等于17次，和上面所占用的扇区数相等
-	int 	0x13					! 此BIOS中断服务是磁盘服务例程
+	int 	0x13			! 此BIOS中断服务是磁盘服务例程
 	jnc	ok_load				! 如果出现错误CF会被设置，CF	Set on error，因此检测CF进位标记
 die:	jmp	die
 
@@ -57,15 +57,15 @@ die:	jmp	die
 ! now we want to move to protected mode ...
 ok_load:
 	cli			! no interrupts allowed ! 禁止中断
-	mov	ax, #SYSSEG	! si,di 它们只能用做16位寄存器，一般用来存放地址。在串处理指令中，
-	mov	ds, ax		! si用作隐含的源串地址，默认在DS中；di用做隐含的目的串地址，默认在ES中。 分别达到在数据段和附加段中寻址的目的.
+	mov	ax, #SYSSEG	    ! si,di 它们只能用做16位寄存器，一般用来存放地址。在串处理指令中，
+	mov	ds, ax		    ! si用作隐含的源串地址，默认在DS中；di用做隐含的目的串地址，默认在ES中。 分别达到在数据段和附加段中寻址的目的.
 	xor	ax, ax
 	mov	es, ax
-	mov	cx, #0x2000 ! 循环0x2000次
-	sub	si,si	! si源变址寄存器，一般与段寄存器DS联用
-	sub	di,di	! di目地变址寄存器，一般与段寄存器ES联用
-	rep			! 前缀指令，有调用约定
-	movw		! 上述代码完成把ds段(0x1000:0)内0x2000*2字节数据复制到es段指定的内(0x0:0)，物理内存0处开始
+	mov	cx, #0x2000     ! 循环0x2000次
+	sub	si,si	        ! si源变址寄存器，一般与段寄存器DS联用
+	sub	di,di	        ! di目地变址寄存器，一般与段寄存器ES联用
+	rep			        ! 前缀指令，有调用约定
+	movw		        ! 上述代码完成把ds段(0x1000:0)内0x2000*2字节数据复制到es段指定的内(0x0:0)，物理内存0处开始
 	mov	ax, #BOOTSEG
 	mov	ds, ax
 	lidt	idt_48		! load idt with 0,0， 装载中断向量表，此次为空
@@ -98,7 +98,7 @@ gdt:	.word	0,0,0,0		! dummy
 	.word	0x00C0		! granularity=4096, 386
 
 idt_48: .word	0		! idt limit=0 ! 中断向量表大小
-	.word	0,0		! idt base=0L ! 起始地址为0
+	.word	0,0		    ! idt base=0L ! 起始地址为0
 gdt_48: .word	0x7ff		! gdt limit=2048, 256 GDT entries ! 全局描述符表大小，每个表项8个字节
 	.word	0x7c00+gdt,0	! gdt base = 07xxx
 .org 510					! 地位伪指令, 指明后面代码开始地址是510, 以下代码完成将地址510、511设置为0x55、0xAA
