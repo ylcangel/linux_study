@@ -108,11 +108,11 @@ setup_gdt:
 # 在第二次初始化时，它会被重新填充，填充为真正的idt表项
 # 保护模式分段寻址是段选择符 ：偏移， 0008对应二进制的16位为0000 0000 0000 1000，TI = 0，是GDT中的段，cpl = 0 （内核态）
 # DI = 1，是代码GDT的第一个段，即内核代码段，从boot.s的GDT中我们可以看到内核代码的base为0x0000
-# 并且中断向量表的base同样为0x0000，因此内存起始部分为中断向量表，这也就是为什么很多书籍都提到物理内存的前2048字节内存是中断向量表的原因
+# 此次填充256个默认的中断例程ignore_int到idt其实的地址处。
 setup_idt:
-	lea ignore_int,%edx			# 取ignore_int的地址
-	movl $0x00080000,%eax		
-	movw %dx,%ax		/* selector = 0x0008 = cs */  # 执行完后eax变为 0008 dx(ignore_int低16位偏移)，这么做的原因完全是中断描述符的规则
+	lea ignore_int,%edx			# 取ignore_int的地址，ignore_int是在内核代码段，0x0008代表内核代码段，dx是ignore_int段内低16bit偏移
+	movl $0x00080000,%eax		# 执行完后eax变为 0008 dx(ignore_int低16位偏移)，edx高16位为ignore_int高16位偏移，低16位为中断描述符表项的32-47位
+	movw %dx,%ax		/* selector = 0x0008 = cs */  #这么做的原因完全是中断描述符的规则，它64bit需要两个寄存器才能容纳，见下图
 	movw $0x8E00,%dx	/* interrupt gate - dpl=0, present */ # 0x8e00对应16位二进制数为1000 1110 0000 0000，根据深入理解linux内核，
                         # 此中断描述符代表中断门描述符（另外两种为任务门和陷阱门），中断门描述符如下:
                         # 63                            48 47   45 44 43 42 41 40 39 38 37              32
@@ -131,7 +131,7 @@ rp_sidt:					# 都被填充为一样的ignore_int
 	addl $8,%edi			# idt索引加1
 	dec %ecx
 	jne rp_sidt
-	lidt lidt_opcode		# 装载IDT到idtr寄存器
+	lidt lidt_opcode		# 装载.idt地址和表项数量到idtr寄存器
 	ret
 
 # -----------------------------------
