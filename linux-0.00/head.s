@@ -83,15 +83,15 @@ startup_32:
 
 # Move to user mode (task 0)
 	pushfl						# 压入标志寄存器
-	andl $0xffffbfff, (%esp)	# 设置栈，掩码第15位，这里干嘛我也没弄明白
+	andl $0xffffbfff, (%esp)	# 设置栈，掩码第15位，这里干嘛我也没弄明白，但按照注释应该是切换到用户态，但我没查到关于标志寄存器15bit的信息
 	popfl						# 弹出标志寄存器
 	movl $TSS0_SEL, %eax
-	ltr %ax						# 装载TSS0_SEL	= 0x20 到任务寄存器的段选择器字段， 0x20为0000 0000 0010 0000，DI = 4，即TSS0，理论上这里会加载SS和ESP(都为0)
+	ltr %ax						# 装载TSS0_SEL	= 0x20 到任务寄存器的段选择器字段， 0x20为0000 0000 0010 0000，INDEX = 4，即TSS0，理论上这里会加载SS和ESP(都为0)
 	movl $LDT0_SEL, %eax		# LDT0_SEL	= 0x28
-	lldt %ax 					# 装载LDT0_SEL	= 0x28到ldtr寄存器， 0x28为0000 0000 0010 1000，DI = 5， 即LDT0
+	lldt %ax 					# 装载LDT0_SEL	= 0x28到ldtr寄存器， 0x28为0000 0000 0010 1000，INDEX = 5， 即LDT0
 	movl $0, current			# 设置current为0
 	sti							# 开启中断，允许中断发生，通常的，iret指令会从堆栈弹出代码段选择符到CS寄存器，同时会弹出偏移到IP，还会弹出标志寄存器
-	pushl $0x17					# 数据段对应的段选择符，0x17对应16位二进制为0000 0000 0001 0111, TI = 1, DPL = 3(用户态), DI = 2, 到LTD0的第二个段
+	pushl $0x17					# 数据段对应的段选择符，0x17对应16位二进制为0000 0000 0001 0111, TI = 1, DPL = 3(用户态), INDEX = 2, 到LTD0的第二个段
 	pushl $init_stack			# 此处涉及不同保护级别切换，iret还会弹出堆栈信息，包括堆栈段选择符到SS段寄存器，和esp，形成 SS:init_stack
 	pushfl						# 压入标志寄存器， iret会弹出
 	pushl $0x0f					# 0x0f对应16位二进制为0000 0000 0000 1111, TI = 1, DPL = 3(用户态), DI = 1, 到LTD0的第一个段，代码段
@@ -190,10 +190,11 @@ timer_interrupt:
 	cmpl %eax, current		# current和1比较
 	je 1f
 	movl %eax, current		# current != 1，将其赋值为1
-	ljmp $TSS1_SEL, $0		# long jump，TSS1_SEL = 0X30即0000 0000 0011 0000，对应TSS1 descr段，又TSS1->tss1(eip指向task1) -> task1
+	ljmp $TSS1_SEL, $0		# long jump，TSS1_SEL = 0x30即0000 0000 0011 0000，对应TSS1 descr段，又TSS1->tss1(eip指向task1) -> task1
 	jmp 2f					# 跳转到lable 2处，感觉永远都走不到label 2处，我应该可以确定就是执行不到
 1:	movl $0, current		# current = 1跳转到此
-	ljmp $TSS0_SEL, $0		# TSS0 descr，指向我还在想，tss0记录的eip是0它怎么实现切换的呢，经过思考每次任务切换cpu会更新tss，eip就会被写进去，它就实现了任务切换
+	ljmp $TSS0_SEL, $0		# TSS0 descr，指向我还在想，tss0记录的eip是0它怎么实现切换的呢，经过思考每次任务切换cpu会更新tss（task0切换到task1，tss0会更新task0硬件信息）
+                            # eip就会被写进去，它就实现了任务切换
 2:	popl %eax				# 恢复寄存器				# 这是接上面，但实际的linux操作系统好像没用tss中的eip，它被保留到栈上了，不过这里还不是linux，它目前遵守硬件
 	pop %ds												# 约定，之所以这样，我思考了，这里根本就不可能执行到iret，如果能执行到iret是需要在栈上弹出ip的。
 	iret					# 结束中断
