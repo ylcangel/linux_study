@@ -235,7 +235,7 @@ idt:	.fill 256,8,0		# idt is uninitialized # 共256个条目，每个条目8个�
 gdt:	.quad 0x0000000000000000	/* NULL descriptor */
 	.quad 0x00c09a00000007ff	/* 8Mb 0x08, base = 0x00000 */
 	.quad 0x00c09200000007ff	/* 8Mb 0x10 */
-	.quad 0x00c0920b80000002	/* screen 0x18 - for display */	# base = 0x0008b0
+	.quad 0x00c0920b80000002	/* screen 0x18 - for display */	# base = 0xb80000, 8k
 
 	.word 0x0068, tss0, 0xe900, 0x0	# TSS0 descr 0x20
 	.word 0x0040, ldt0, 0xe200, 0x0	# LDT0 descr 0x28
